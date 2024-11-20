@@ -1,0 +1,37 @@
+name: Publish Dumpify
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup .NET 
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+   
+    - name: Restore dependencies
+      run: dotnet restore ./src
+
+    - name: Build
+      run: dotnet build ./src -c Release --no-restore
+      
+    - name: Create Nuget Package
+      run: dotnet pack -c Release /p:Version=${{github.event.release.tag_name}} /p:PackageReleaseNotes="See https://github.com/MoaidHathot/Dumpify/releases/tag/${{github.event.release.tag_name}}" ./src/Dumpify
+    
+    - name: Archive Nuget Package for Dumpify
+      uses: actions/upload-artifact@v4
+      with:
+        name: packages
+        path: "./src/Dumpify/bin/Release/Dumpify.${{github.event.release.tag_name}}.nupkg"
+
+    - name: Publish Nuget Package
+      run: dotnet nuget push ./src/**/*.nupkg --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_API_KEY }}
+
+      
